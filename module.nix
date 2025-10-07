@@ -11,8 +11,8 @@ in
   options.services.nixos-unattended-upgrade = {
     enable = lib.mkEnableOption "nixos-unattended-upgrade, automatic system upgrades on steroids";
 
-    cacheUrl = lib.mkOption {
-      type = lib.types.url;
+    cacheURL = lib.mkOption {
+      type = lib.types.string;
       example = "https://cache.example.com";
       description = ''
         URL of your binary cache
@@ -38,14 +38,30 @@ in
 
     updateEndpoint = lib.mkOption {
       type = lib.types.string;
-      example = "/run/secrets/nixos-unattended-upgrade.toml";
+      example = "https://nixos-update.example.com";
       description = ''
         HTTPS address of your update endpoint
       '';
     };
 
-    timerTime = lib.mkOption {
+    hostname = lib.mkOption {
       type = lib.types.string;
+      default = config.networking.fqdn;
+      description = ''
+        Hostname of your machine. Used to query the update endpoinnt
+      '';
+    };
+
+    unattendedReboot = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        If the script should also reboot the host. Otherwise the script will only switch into the new closure.
+      '';
+    };
+
+    timerTime = lib.mkOption {
+      type = lib.types.str;
       default = "*-*-* 4:00:00";
       example = "*-*-* 4:00:00";
       description = ''
@@ -61,7 +77,7 @@ in
         cfg.cacheURL
       ];
       trusted-public-keys = [
-        cfg.pubKey
+        cfg.trustedPubkey
       ];
     };
 
@@ -72,6 +88,11 @@ in
         zstd
         kexec-tools
       ];
+      environment = {
+        HOSTNAME = cfg.hostname;
+        UPDATE_ENDPOINT = cfg.updateEndpoint;
+        UNATTENDED_REBOOT = "${lib.boolToString cfg.unattendedReboot}";
+      };
       script = builtins.readFile ./update.sh;
     };
 

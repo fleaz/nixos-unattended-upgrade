@@ -1,11 +1,6 @@
 #! /usr/bin/env bash
 set -eu
 
-HOSTNAME=$(hostname --short)
-UPDATE_ENDPOINT="https://nixos-updates.fleaz.me"
-ATTIC_ENDPOINT="cache.fleaz.me"
-
-
 CURRENT=$(readlink -f /run/current-system)
 BOOTET=$(readlink -f /run/booted-system)
 
@@ -36,7 +31,12 @@ if [[ "${LATEST_KERNEL}" == "${RUNNING_KERNEL}" ]]; then
     echo "Runnig  the same kernel as the latest system closure."
     ${LATEST}/bin/switch-to-configuration switch
 else
-    echo "The latest closure has a newer kernel. We need to reboot"
-    ${LATEST}/bin/switch-to-configuration boot
-    systemctl reboot
+    if [[ "${UNATTENDED_REBOOT:-false}" == "true" ]]; then # Set default value, to never unintentionally reboot
+        echo "The latest closure has a newer kernel. We need to reboot"
+        ${LATEST}/bin/switch-to-configuration boot
+        systemctl reboot
+    else
+        echo "The latest closure has a newer kernel, but 'unattendedReboot' is not set. Only switching"
+        ${LATEST}/bin/switch-to-configuration switch
+    fi
 fi
