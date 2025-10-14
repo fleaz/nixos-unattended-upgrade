@@ -5,30 +5,43 @@
   ...
 }:
 let
+  inherit (lib)
+    mkOption
+    types
+    ;
+
   cfg = config.services.nixos-unattended-upgrade;
 in
 {
   options.services.nixos-unattended-upgrade = {
     enable = lib.mkEnableOption "nixos-unattended-upgrade, automatic system upgrades on steroids";
 
-    cacheURL = lib.mkOption {
-      type = lib.types.string;
+    systemClosureEndpoint = mkOption {
+      type = types.str;
+      example = "https://nixos-closures-paths.s3.example.com/\${config.networking.fqdn}/latest-closure-path";
+      description = ''
+        Endpoint where a host can retrieve the store path to its latest system closure.
+      '';
+    };
+
+    binaryCacheURL = mkOption {
+      type = types.str;
       example = "https://cache.example.com";
       description = ''
         URL of your binary cache
       '';
     };
 
-    trustedPubkey = lib.mkOption {
-      type = lib.types.string;
+    trustedPubkey = mkOption {
+      type = types.str;
       example = "servers:asdf1337";
       description = ''
         Public key for your cache
       '';
     };
 
-    netrcFile = lib.mkOption {
-      type = lib.types.path;
+    netrcFile = mkOption {
+      type = types.path;
       default = "/etc/nix/netrc";
       example = "/etc/nix/netrc";
       description = ''
@@ -36,37 +49,44 @@ in
       '';
     };
 
-    updateEndpoint = lib.mkOption {
-      type = lib.types.string;
-      example = "https://nixos-update.example.com";
-      description = ''
-        HTTPS address of your update endpoint
-      '';
-    };
-
-    hostname = lib.mkOption {
-      type = lib.types.string;
-      default = config.networking.fqdn;
-      description = ''
-        Hostname of your machine. Used to query the update endpoinnt
-      '';
-    };
-
-    unattendedReboot = lib.mkOption {
-      type = lib.types.bool;
+    allowKexec = mkOption {
+      type = types.bool;
       default = false;
       description = ''
-        If the script should also reboot the host. Otherwise the script will only switch into the new closure.
+        Whether to kexec (using `systemctl kexec`) into the new generation, when the generation has a newer kernel than the booted kernel.
       '';
     };
 
-    timerTime = lib.mkOption {
-      type = lib.types.str;
-      default = "*-*-* 4:00:00";
-      example = "*-*-* 4:00:00";
+    allowReboot = mkOption {
+      type = types.bool;
+      default = false;
       description = ''
-        OnCalender value for the systemd timer
+        Whether to reboot into the new generation, when the generation has a newer kernel than the booted kernel.
       '';
+    };
+
+    timer = {
+      time = mkOption {
+        type = types.str;
+        default = "*-*-* 4:00:00";
+        example = "*-*-* 4:00:00";
+        description = ''
+          `OnCalender` expression for the systemd timer.
+
+          For possible formats, please refer to {manpage}`systemd.time(7)`.
+        '';
+      };
+
+      randomDelay = mkOption {
+        type = types.str;
+        default = "2h";
+        example = "30m";
+        description = ''
+          Maximum value for a randomly applied delay to the timer start.
+
+          Useful to scatter multiple machines across a shared timeframe.
+        '';
+      };
     };
   };
 
@@ -74,7 +94,7 @@ in
     nix.settings = {
       netrc-file = "${cfg.netrcFile}";
       substituters = [
-        cfg.cacheURL
+        cfg.binaryCacheURL
       ];
       trusted-public-keys = [
         cfg.trustedPubkey
@@ -83,25 +103,25 @@ in
 
     systemd.services."nixos-unattended-upgrade" = {
       path = with pkgs; [
+        config.nix.package
         curl
-        cpio
-        zstd
-        kexec-tools
       ];
       environment = {
-        HOSTNAME = cfg.hostname;
-        UPDATE_ENDPOINT = cfg.updateEndpoint;
-        UNATTENDED_REBOOT = "${lib.boolToString cfg.unattendedReboot}";
+        LATEST_CLOSURE_ENDPOINT_URL = cfg.systemClosureEndpoint;
+        ALLOW_KEXEC = lib.boolToString cfg.allowKexec;
+        ALLOW_REBOOT = lib.boolToString cfg.allowReboot;
       };
       script = builtins.readFile ./update.sh;
+      serviceConfig.Type = "oneshot";
     };
 
     systemd.timers."nixos-unattended-upgrade" = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        OnCalendar = cfg.timerTime;
+        OnCalendar = cfg.timer.time;
+        # Don't hammer the cache
+        RandomizedDelaySec = cfg.timer.randomDelay;
       };
     };
-
   };
 }
