@@ -112,6 +112,7 @@ in
         ALLOW_REBOOT = lib.boolToString cfg.allowReboot;
       };
       script = builtins.readFile ./update.sh;
+      restartIfChanged = false;
       serviceConfig.Type = "oneshot";
     };
 
