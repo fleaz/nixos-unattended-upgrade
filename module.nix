@@ -87,6 +87,17 @@ in
           Useful to scatter multiple machines across a shared timeframe.
         '';
       };
+
+      persistent = mkOption {
+        type = types.bool;
+        default = false;
+        example = true;
+        description = ''
+          Trigger unattended-upgrade immediately when the timer units gets activated, when the previous timer run was missed.
+
+          Useful when a machine is not reliably up during the scheduled unattended upgrade run.
+        '';
+      };
     };
   };
 
@@ -122,6 +133,7 @@ in
       after = [ "network-online.target" ];
       timerConfig = {
         OnCalendar = cfg.timer.time;
+        Persistent = cfg.timer.persistent;
         # Don't hammer the cache
         RandomizedDelaySec = cfg.timer.randomDelay;
       };
