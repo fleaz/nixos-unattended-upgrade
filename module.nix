@@ -49,6 +49,16 @@ in
       '';
     };
 
+    allowSwitch = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Whether to switch into the new generation.
+
+        Disabling this can make sense e.g. when you want prevent disruptive behavior while using the machine.
+      '';
+    };
+
     allowKexec = mkOption {
       type = types.bool;
       default = false;
@@ -119,6 +129,7 @@ in
       ];
       environment = {
         LATEST_CLOSURE_ENDPOINT_URL = cfg.systemClosureEndpoint;
+        ALLOW_SWITCH = lib.boolToString cfg.allowSwitch;
         ALLOW_KEXEC = lib.boolToString cfg.allowKexec;
         ALLOW_REBOOT = lib.boolToString cfg.allowReboot;
       };
