@@ -118,6 +118,8 @@ in
 
     systemd.timers."nixos-unattended-upgrade" = {
       wantedBy = [ "timers.target" ];
+      wants = [ "network-online.target" ];
+      after = [ "network-online.target" ];
       timerConfig = {
         OnCalendar = cfg.timer.time;
         # Don't hammer the cache
