@@ -21,10 +21,10 @@ LATEST_KERNEL=$(readlink -f "${LATEST}/kernel")
 BOOTED_KERNEL=$(readlink -f /run/booted-system/kernel)
 
 if [[ "${LATEST_KERNEL}" == "${BOOTED_KERNEL}" ]]; then
-    if [[ "${ALLOW_SWITCH:~true}" == "true" ]]; then
+    if [[ "${ALLOW_SWITCH:-true}" == "true" ]]; then
         echo "Latest generation is on the same kernel. Executing switch into new generation"
         "${LATEST}/bin/switch-to-configuration" switch
-    elif [[ "${ALLOW_BOOT:~false}" == "true" ]]; then
+    elif [[ "${ALLOW_BOOT:-false}" == "true" ]]; then
         echo "Latest generation is on the same kernel. Setting as default for next boot."
         "${LATEST}/bin/switch-to-configuration" boot
     else
