@@ -21,15 +21,14 @@ LATEST_KERNEL=$(readlink -f "${LATEST}/kernel")
 BOOTED_KERNEL=$(readlink -f /run/booted-system/kernel)
 
 if [[ "${LATEST_KERNEL}" == "${BOOTED_KERNEL}" ]]; then
+    echo "Latest generation is on the same kernel"
+
     if [[ "${ALLOW_SWITCH:-true}" == "true" ]]; then
-        echo "Latest generation is on the same kernel. Executing switch into new generation"
+        echo "Executing switch into new generation"
         "${LATEST}/bin/switch-to-configuration" switch
-    elif [[ "${ALLOW_BOOT:-false}" == "true" ]]; then
-        echo "Latest generation is on the same kernel. Setting as default for next boot."
-        "${LATEST}/bin/switch-to-configuration" boot
     else
-        echo "ERROR: new generation but no action (switch, boot) allowed"
-        exit 1
+        echo "Setting as default for next boot"
+        "${LATEST}/bin/switch-to-configuration" boot
     fi
 else
     echo "Latest generation uses a newer kernel"
@@ -43,10 +42,10 @@ else
         "${LATEST}/bin/switch-to-configuration" boot
         systemctl reboot
     elif [[ "${ALLOW_SWITCH:-true}" == "true" ]]; then
-        echo "Neither kexec nor reboot are allowed. Executing switching into new generation"
+        echo "Executing switch into new generation"
         "${LATEST}/bin/switch-to-configuration" switch
     else
-        echo "ERROR: new generation with new kernel, but no action (kexec, boot, switch) allowed"
+        echo "ERROR: No action (kexec, boot, switch) allowed. Exiting"
         exit 1
     fi
 fi
