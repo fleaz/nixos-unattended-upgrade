@@ -17,6 +17,9 @@ if ! nix-store --realise "${LATEST}"; then
   exit 1
 fi
 
+# Add new closure as a system closure
+nix-env --profile /nix/var/nix/profiles/system --set "${LATEST}"
+
 LATEST_KERNEL=$(readlink -f "${LATEST}/kernel")
 BOOTED_KERNEL=$(readlink -f /run/booted-system/kernel)
 
